@@ -91,3 +91,15 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_getpriority(void)
+{
+  return myproc()->priority;
+}
+
+uint64
+sys_getboost(void)
+{
+  return myproc()->boost;
+}
