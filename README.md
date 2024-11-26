@@ -102,6 +102,10 @@ if (ip->permission == 5) {
     return -1;
 }
 ```
+En adición a esto, se señala en la línea 396:
+```c
+f->writable = (ip->permission != 5) || (omode & O_WRONLY) || (omode & O_RDWR);
+```
 
 ## Pruebas de funcionamiento
 A continuación, se presenta el código utilizado para probar los cambios realizados en esta tarea (`permtest.c`):
