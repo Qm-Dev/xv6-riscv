@@ -271,6 +271,7 @@ create(char *path, short type, short major, short minor)
   ip->major = major;
   ip->minor = minor;
   ip->nlink = 1;
+  ip->permission = 3;
   iupdate(ip);
 
   if(type == T_DIR){  // Create . and .. entries.
@@ -333,6 +334,40 @@ sys_open(void)
       end_op();
       return -1;
     }
+    // Verificar permisos del archivo (0 sin permisos, 1 lectura, 2 escritura, 3 L/E, 5 inmutable)
+    // Inmutabilidad (5 y solo lectura)
+    if (ip->permission == 5) {
+      if (omode != O_RDONLY){
+        iunlockput(ip);
+        end_op();
+        return -1;
+      }
+    }
+    // Resto de permisos
+    else {
+      // No hay permisos
+      if (ip->permission == 0){
+        iunlockput(ip);
+        end_op();
+        return -1;
+      }
+      // Solicitar lectura 
+      if (ip->permission == 1){
+        if (omode != O_RDONLY){
+          iunlockput(ip);
+          end_op();
+          return -1;
+        }
+      }
+      // Solicitar escritura
+      if (ip->permission == 2){
+        if (omode != O_WRONLY){
+          iunlockput(ip);
+          end_op();
+          return -1;
+        }
+      }
+    }
   }
 
   if(ip->type == T_DEVICE && (ip->major < 0 || ip->major >= NDEV)){
@@ -358,7 +393,7 @@ sys_open(void)
   }
   f->ip = ip;
   f->readable = !(omode & O_WRONLY);
-  f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
+  f->writable = (ip->permission != 5) || (omode & O_WRONLY) || (omode & O_RDWR);
 
   if((omode & O_TRUNC) && ip->type == T_FILE){
     itrunc(ip);
@@ -501,5 +536,39 @@ sys_pipe(void)
     fileclose(wf);
     return -1;
   }
+  return 0;
+}
+
+uint64
+sys_chmod(void)
+{
+  char ruta_archivo[MAXPATH];
+  int nuevo_permiso;
+  struct inode *ip;
+  argint(1, &nuevo_permiso);
+
+  // Corroborar validez de los valores en los args ingresados
+  if (argstr(0, ruta_archivo, MAXPATH) < 0 || nuevo_permiso < 0){
+    return -1;
+  }
+  begin_op();
+  if ((ip = namei(ruta_archivo)) == 0){
+    end_op();
+    return -1;
+  }
+  ilock(ip);
+
+  // Cambiar el permiso del archivo (excepto aquellos inmutables)
+  if (ip->permission == 5) {
+    iunlockput(ip);
+    end_op();
+    return -1;
+  }
+  ip->permission = nuevo_permiso;
+  iupdate(ip);
+  iunlockput(ip);
+
+  // Finalizar operación
+  end_op();
   return 0;
 }
