@@ -693,3 +693,19 @@ procdump(void)
     printf("\n");
   }
 }
+
+// Declaración global de la cola
+struct message msg_queue[MSG_QUEUE_SIZE];
+int msg_queue_head = 0;
+int msg_queue_tail = 0;
+
+struct spinlock msg_queue_lock;
+
+// Método para la inicialización de la cola
+void
+init_msg_queue(void)
+{
+   initlock(&msg_queue_lock, "msg_queue_lock");
+   msg_queue_head = 0;
+   msg_queue_tail = 0;
+}

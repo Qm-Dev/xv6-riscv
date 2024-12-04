@@ -503,3 +503,78 @@ sys_pipe(void)
   }
   return 0;
 }
+
+uint64
+sys_send(void)
+{
+  // Declarar variables
+  int receiver_pid;
+  uint64 msg_dir;
+  char msg_content[MAX_MSG_SIZE];
+
+  // Obtener args
+  argint(0, &receiver_pid);
+  argaddr(1, &msg_dir);
+
+  // Corroborar validez de los args
+  if (receiver_pid < 0 || msg_dir < 0)
+    return -1;
+
+  // Verificar validez del mensaje
+  if (copyin(myproc()->pagetable, msg_content, msg_dir, sizeof(char) * MAX_MSG_SIZE) < 0)
+    return -1;
+  
+  // Lock. Otros procesos no podrán acceder a la cola
+  acquire(&msg_queue_lock);
+
+  // Cola llena
+  if (msg_queue_tail == MSG_QUEUE_SIZE) {
+      release(&msg_queue_lock);
+      return -1;
+  }
+
+  // Guardar el mensaje en la cola (ID proceso remitente, contenido del mensaje)
+  msg_queue[msg_queue_tail].sender_pid = myproc()->pid;
+  safestrcpy(msg_queue[msg_queue_tail].content, msg_content, MAX_MSG_SIZE);
+  msg_queue_tail++;
+
+  // Despertar procesos bloqueados y levantar el lock
+  wakeup(&msg_queue);
+  release(&msg_queue_lock);
+
+  return 0;
+}
+
+uint64
+sys_receive(void)
+{
+  // Declarar y obtener variables
+  uint64 msg_dir;
+  char message[MAX_MSG_SIZE];
+  argaddr(0, &msg_dir);
+
+  // Corroborar validez del arg
+  if (msg_dir < 0)
+    return -1;
+
+  // Lock.
+  acquire(&msg_queue_lock);
+
+  // Cola vacía
+  while (msg_queue_head == msg_queue_tail) {
+    sleep(&msg_queue, &msg_queue_lock);
+  }
+
+  // Obtener datos del mensaje (ID proceso remitente, contenido del mensaje)
+  int sender_pid = msg_queue[msg_queue_head].sender_pid;
+  safestrcpy(message, msg_queue[msg_queue_head].content, MAX_MSG_SIZE);
+  msg_queue_head = (msg_queue_head + 1) % MSG_QUEUE_SIZE;
+  
+  release(&msg_queue_lock);
+
+  // Verificar validez del mensaje
+  if (copyout(myproc()->pagetable, msg_dir, message, MAX_MSG_SIZE) < 0)
+    return -1;
+
+  return sender_pid;
+}

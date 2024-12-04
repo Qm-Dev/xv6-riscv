@@ -187,3 +187,13 @@ void            virtio_disk_intr(void);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
+
+// Definir la cola global de mensajes
+#define MSG_QUEUE_SIZE 64
+#include "message.h"
+
+extern message msg_queue[MSG_QUEUE_SIZE];
+extern int msg_queue_head;
+extern int msg_queue_tail;
+
+void            init_msg_queue(void);
