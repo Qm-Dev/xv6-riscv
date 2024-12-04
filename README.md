@@ -35,7 +35,7 @@ extern int msg_queue_tail;
 
 void            init_msg_queue(void);
 ```
-2. En `proc.h`, se declara un spinlock asociado a la cola, esto acorde a lo solicitado en el enunciado original. Esto evita que múltiples procesos puedan acceder al mismo tiempo a la cola de mensajes.
+2. En `proc.h`, se declara un spinlock asociado a la cola, esto acorde a lo solicitado en el enunciado original. Esto evita que múltiples procesos puedan acceder al mismo tiempo a la cola de mensajes. (109)
 ```h
 extern struct spinlock msg_queue_lock;
 ```
@@ -102,7 +102,7 @@ extern uint64 sys_receive(void);
 [SYS_receive] sys_receive,
 // ...
 ```
-5. `sysfile.c`: Se escribe la lógica de ambas llamadas (507-).
+5. `sysfile.c`: Se escribe la lógica de ambas llamadas (507-580).
 ```c
 uint64
 sys_send(void)
